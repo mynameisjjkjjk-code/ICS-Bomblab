@@ -5,10 +5,6 @@
 
 #define MAX_FIELDS 8
 
-/*
- * 将 count 个无符号整数写成一行，以空格分隔。
- * 成功返回 0；未实现、格式化失败或缓冲区不足时返回非零。
- */
 static int write_answer(char *out, size_t cap,
                         const uint32_t *values, size_t count) {
     size_t used = 0;
@@ -49,9 +45,40 @@ int solve_phase_2(uint64_t challenge, char *out, size_t cap) {
 
 int solve_phase_3(uint64_t challenge, char *out, size_t cap) {
     uint32_t values[MAX_FIELDS] = {0};
-    size_t count = 0;
-    (void)challenge;
-    return write_answer(out, cap, values, count);
+    uint32_t index = (uint32_t)(challenge & 7u);
+    uint32_t x = (uint32_t)(challenge >> 32)
+               ^ (uint32_t)(challenge >> 3);
+
+    values[0] = index;
+
+    switch (index) {
+        case 0:
+            values[1] = (x ^ 0x5d46u) + (x >> 1);
+            break;
+        case 1:
+            values[1] = (4u * x) ^ 0xa7c1u;
+            break;
+        case 2:
+            values[1] = (4u * x) ^ 0xfc4du;
+            break;
+        case 3:
+            values[1] = (x ^ 0x1836u) + (x >> 1);
+            break;
+        case 4:
+            values[1] = 5u * x + 0x8fbau;
+            break;
+        case 5:
+            values[1] = 5u * x + 0xfbdcu;
+            break;
+        case 6:
+            values[1] = 5u * x + 0x2b520u;
+            break;
+        case 7:
+            values[1] = 5u * x + 0x221fu;
+            break;
+    }
+
+    return write_answer(out, cap, values, 2);
 }
 
 int solve_phase_4(uint64_t challenge, char *out, size_t cap) {
