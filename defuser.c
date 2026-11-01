@@ -21,11 +21,10 @@ int solve_phase_1(uint64_t challenge, char *out, size_t cap) {
     uint32_t low = (uint32_t)challenge;
     uint32_t high = (uint32_t)(challenge >> 32);
     uint32_t mid = (uint32_t)(challenge >> 16);
-
     uint32_t a = (low + 0x4b8u) ^ high;
     uint32_t b = (low + 4u * mid) ^ 0xa64au;
-
     uint32_t values[MAX_FIELDS] = {0};
+
     values[0] = (3u * b + a) ^ 0x799u;
     return write_answer(out, cap, values, 1);
 }
@@ -50,7 +49,6 @@ int solve_phase_3(uint64_t challenge, char *out, size_t cap) {
                ^ (uint32_t)(challenge >> 3);
 
     values[0] = index;
-
     switch (index) {
         case 0:
             values[1] = (x ^ 0x5d46u) + (x >> 1);
@@ -88,7 +86,6 @@ static uint32_t phase4_walk(uint32_t target, uint32_t low,
     if (target == mid) {
         return (mid + 0x9cu) ^ key;
     }
-
     if (target < mid) {
         uint32_t child = phase4_walk(target, low, mid - 1u, key);
         return (5u * child) ^ (mid + key) ^ 0x18u;
@@ -102,8 +99,8 @@ int solve_phase_4(uint64_t challenge, char *out, size_t cap) {
     uint32_t target = (uint32_t)challenge & 127u;
     uint32_t key = (uint32_t)(challenge >> 7)
                  ^ (uint32_t)(challenge >> 32);
-
     uint32_t values[MAX_FIELDS] = {0};
+
     values[0] = phase4_walk(target, 0u, 127u, key);
     return write_answer(out, cap, values, 1);
 }
@@ -131,11 +128,9 @@ static const struct Phase5Node phase5_nodes[12] = {
 
 int solve_phase_5(uint64_t challenge, char *out, size_t cap) {
     static const int heads[8] = {6, 5, 4, 7, 3, 1, 11, 10};
-
     uint32_t values[MAX_FIELDS] = {0};
     unsigned steps = (unsigned)((challenge >> 3) & 3u);
     int node = heads[challenge & 7u];
-
     uint32_t acc = (uint32_t)(challenge >> 6)
                  ^ (uint32_t)(challenge >> 32)
                  ^ 0xfbd4u;
@@ -147,9 +142,7 @@ int solve_phase_5(uint64_t challenge, char *out, size_t cap) {
             ^ phase5_nodes[node].id;
         values[1] = phase5_nodes[node].id;
 
-        if (i < steps) {
-            node = phase5_nodes[node].next;
-        }
+        if (i < steps) node = phase5_nodes[node].next;
     }
 
     values[0] = acc;
@@ -180,21 +173,40 @@ static uint32_t phase6_apply(unsigned index, uint32_t x) {
 int solve_phase_6(uint64_t challenge, char *out, size_t cap) {
     unsigned first = (unsigned)(challenge & 7u);
     unsigned second = (unsigned)((challenge >> 3) & 7u);
-
     uint32_t x = (uint32_t)(challenge >> 6)
                ^ (uint32_t)(challenge >> 32);
-
     uint32_t intermediate = phase6_apply(first, x) ^ 0x774u;
-
     uint32_t values[MAX_FIELDS] = {0};
+
     values[0] = phase6_apply(second, intermediate) + 0xc562u;
     return write_answer(out, cap, values, 1);
 }
 
-int solve_secret(uint64_t challenge, uint64_t context, char *out, size_t cap) {
-    (void)challenge;
-    (void)context;
-    (void)out;
-    (void)cap;
-    return 1;
+int solve_secret(uint64_t challenge, uint64_t context,
+                 char *out, size_t cap) {
+    uint32_t a = (uint32_t)challenge
+               ^ (uint32_t)(challenge >> 32);
+    uint32_t b = (uint32_t)context
+               ^ (uint32_t)(context >> 32);
+    uint32_t index = (uint32_t)context & 3u;
+
+    uint32_t x = a ^ b;
+    uint32_t rotated = (x << 1) | (x >> 31);
+    uint32_t mixed = (rotated + 0xcaa6u) ^ 0xb39cu;
+
+    uint32_t second = mixed
+                    ^ (index * 0xcaa6u)
+                    ^ (uint32_t)(context >> 16);
+    uint32_t third = second
+                   ^ (b + index + 0xb39cu + (a >> 1));
+
+    int size = snprintf(
+        out, cap,
+        "AAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAA"
+        "OPEN %" PRIu32 " %" PRIu32 " %" PRIu32,
+        index, second, third
+    );
+
+    return size < 0 || (size_t)size >= cap;
 }
