@@ -108,11 +108,57 @@ int solve_phase_4(uint64_t challenge, char *out, size_t cap) {
     return write_answer(out, cap, values, 1);
 }
 
+/*
+ * 按原二进制中的地址顺序编号：
+ * 节点 i 的原地址为 0x405ba0 + 16*i。
+ * next 用节点编号表示，-1 表示空指针。
+ */
+struct Phase5Node {
+    uint32_t value;
+    uint32_t id;
+    int next;
+};
+
+static const struct Phase5Node phase5_nodes[12] = {
+    {0xfc1fu, 0xb2au,  8},
+    {0xf2f0u, 0x450u, 11},
+    {0x12f3u, 0x272u, -1},
+    {0xb464u, 0x835u,  1},
+    {0x7410u, 0xa31u,  7},
+    {0x9edcu, 0x37fu,  4},
+    {0x3f44u, 0x547u,  5},
+    {0x8134u, 0x02cu,  3},
+    {0xbc76u, 0x95cu,  9},
+    {0x3f28u, 0x667u,  2},
+    {0x85d8u, 0x728u,  0},
+    {0xc0b4u, 0x11bu, 10}
+};
+
 int solve_phase_5(uint64_t challenge, char *out, size_t cap) {
+    static const int heads[8] = {6, 5, 4, 7, 3, 1, 11, 10};
+
     uint32_t values[MAX_FIELDS] = {0};
-    size_t count = 0;
-    (void)challenge;
-    return write_answer(out, cap, values, count);
+    unsigned steps = (unsigned)((challenge >> 3) & 3u);
+    int node = heads[challenge & 7u];
+
+    uint32_t acc = (uint32_t)(challenge >> 6)
+                 ^ (uint32_t)(challenge >> 32)
+                 ^ 0xfbd4u;
+
+    for (unsigned i = 0; i <= steps; ++i) {
+        if (node < 0 || node >= 12) return 1;
+
+        acc = (3u * acc + phase5_nodes[node].value)
+            ^ phase5_nodes[node].id;
+        values[1] = phase5_nodes[node].id;
+
+        if (i < steps) {
+            node = phase5_nodes[node].next;
+        }
+    }
+
+    values[0] = acc;
+    return write_answer(out, cap, values, 2);
 }
 
 int solve_phase_6(uint64_t challenge, char *out, size_t cap) {
