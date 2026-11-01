@@ -108,11 +108,6 @@ int solve_phase_4(uint64_t challenge, char *out, size_t cap) {
     return write_answer(out, cap, values, 1);
 }
 
-/*
- * 按原二进制中的地址顺序编号：
- * 节点 i 的原地址为 0x405ba0 + 16*i。
- * next 用节点编号表示，-1 表示空指针。
- */
 struct Phase5Node {
     uint32_t value;
     uint32_t id;
@@ -161,11 +156,39 @@ int solve_phase_5(uint64_t challenge, char *out, size_t cap) {
     return write_answer(out, cap, values, 2);
 }
 
+static uint32_t phase6_apply(unsigned index, uint32_t x) {
+    static const unsigned ops[8] = {0, 2, 5, 0, 2, 4, 3, 1};
+
+    switch (ops[index]) {
+        case 0:
+            return ((x >> 3) ^ x) + 0xcd83u;
+        case 1:
+            return ((x << 3) | (x >> 29)) ^ 0x8f9cu;
+        case 2:
+            return (x ^ 0x3cefu) + 4u * x;
+        case 3:
+            return (x + 0xa26du) ^ (x >> 1);
+        case 4:
+            return (x >> 3) | (x << 29);
+        case 5:
+            return (4u * x + 0x1a98u) ^ (7u * x);
+    }
+
+    return 0;
+}
+
 int solve_phase_6(uint64_t challenge, char *out, size_t cap) {
+    unsigned first = (unsigned)(challenge & 7u);
+    unsigned second = (unsigned)((challenge >> 3) & 7u);
+
+    uint32_t x = (uint32_t)(challenge >> 6)
+               ^ (uint32_t)(challenge >> 32);
+
+    uint32_t intermediate = phase6_apply(first, x) ^ 0x774u;
+
     uint32_t values[MAX_FIELDS] = {0};
-    size_t count = 0;
-    (void)challenge;
-    return write_answer(out, cap, values, count);
+    values[0] = phase6_apply(second, intermediate) + 0xc562u;
+    return write_answer(out, cap, values, 1);
 }
 
 int solve_secret(uint64_t challenge, uint64_t context, char *out, size_t cap) {
